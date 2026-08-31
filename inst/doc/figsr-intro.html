@@ -343,57 +343,199 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <div id="introduction-to-figs" class="section level2">
 <h2>Introduction to FIGS</h2>
 <p><strong>figsr</strong> implements Fast Interpretable Greedy-Tree Sums
-(‘FIGS’) (<em>Tan et al., PNAS 2023</em>). FIGS fits a sum of shallow
-decision trees (<span class="math inline">\(\hat{f}(x) = \sum_k
-\hat{f}_k(x)\)</span>) by greedily minimizing residual impurity.</p>
-<hr />
+(FIGS) (<em>Tan et al., PNAS 2023</em>). FIGS fits a <em>sum</em> of
+shallow decision trees, <span class="math inline">\(\hat{f}(x) = \sum_k
+\hat{f}_k(x)\)</span>, one split at a time.</p>
+<p>At every step the algorithm compares a single global pool of
+candidates: opening a new tree on the full sample, and splitting each
+leaf of every tree already grown. The candidate with the largest
+reduction in the residual sum of squares wins, and all residuals are
+recomputed against the whole sum before the next step. That is the whole
+idea: <em>grow a new tree or deepen an existing one, whichever helps
+most</em>.</p>
+<p>The pay-off is that additive structure is modeled additively. A
+single CART tree has to repeat a subtree for every combination of two
+independent effects; FIGS puts each effect in its own small tree.</p>
 </div>
-<div id="basic-usage" class="section level2">
-<h2>Basic Usage</h2>
+<div id="a-regression-fit" class="section level2">
+<h2>A regression fit</h2>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(figsr)</span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">42</span>)</span>
-<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>  <span class="at">x1 =</span> <span class="fu">rnorm</span>(<span class="dv">100</span>),</span>
-<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>  <span class="at">x2 =</span> <span class="fu">rnorm</span>(<span class="dv">100</span>),</span>
-<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>  <span class="at">y =</span> <span class="dv">3</span> <span class="sc">*</span> (<span class="fu">rnorm</span>(<span class="dv">100</span>) <span class="sc">&gt;</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="dv">100</span>, <span class="at">sd =</span> <span class="fl">0.2</span>)</span>
-<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>)</span>
-<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a></span>
-<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">figs</span>(y <span class="sc">~</span> x1 <span class="sc">+</span> x2, <span class="at">data =</span> df, <span class="at">max_splits =</span> <span class="dv">4</span>)</span>
-<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a><span class="fu">print</span>(fit)</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">x1 =</span> <span class="fu">rnorm</span>(<span class="dv">300</span>), <span class="at">x2 =</span> <span class="fu">rnorm</span>(<span class="dv">300</span>), <span class="at">x3 =</span> <span class="fu">rnorm</span>(<span class="dv">300</span>))</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>df<span class="sc">$</span>y <span class="ot">&lt;-</span> <span class="dv">3</span> <span class="sc">*</span> (df<span class="sc">$</span>x1 <span class="sc">&gt;</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="dv">2</span> <span class="sc">*</span> (df<span class="sc">$</span>x2 <span class="sc">&gt;</span> <span class="fl">0.5</span>) <span class="sc">-</span> <span class="fl">1.5</span> <span class="sc">*</span> (df<span class="sc">$</span>x3 <span class="sc">&lt;</span> <span class="sc">-</span><span class="fl">0.2</span>) <span class="sc">+</span></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>  <span class="fu">rnorm</span>(<span class="dv">300</span>, <span class="at">sd =</span> <span class="fl">0.3</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">figs</span>(y <span class="sc">~</span> x1 <span class="sc">+</span> x2 <span class="sc">+</span> x3, <span class="at">data =</span> df, <span class="at">max_splits =</span> <span class="dv">6</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>fit</span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="co">#&gt; ========================================================</span></span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a><span class="co">#&gt;   FIGS: Fast Interpretable Greedy-Tree Sums Model</span></span>
 <span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a><span class="co">#&gt; ========================================================</span></span>
-<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a><span class="co">#&gt;   FIGS: Fast Interpretable Greedy-Tree Sums Model</span></span>
-<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a><span class="co">#&gt; ========================================================</span></span>
-<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a><span class="co">#&gt; Mode              : regression</span></span>
-<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a><span class="co">#&gt; Total Trees       : 2</span></span>
-<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a><span class="co">#&gt; Total Splits      : 4 / 4 (max_splits)</span></span>
-<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a><span class="co">#&gt; Predictors Used   : x1, x2</span></span>
-<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a><span class="co">#&gt; ========================================================</span></span>
-<span id="cb1-20"><a href="#cb1-20" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb1-21"><a href="#cb1-21" tabindex="-1"></a><span class="co">#&gt; Use `summary(fit)` to display detailed decision rules.</span></span>
-<span id="cb1-22"><a href="#cb1-22" tabindex="-1"></a><span class="co">#&gt; Use `plot(fit)` to visualize decision tree structures.</span></span>
-<span id="cb1-23"><a href="#cb1-23" tabindex="-1"></a><span class="fu">summary</span>(fit)</span>
-<span id="cb1-24"><a href="#cb1-24" tabindex="-1"></a><span class="co">#&gt; ========================================================</span></span>
-<span id="cb1-25"><a href="#cb1-25" tabindex="-1"></a><span class="co">#&gt;   FIGS Model Summary: Tree Sum Decision Rules</span></span>
-<span id="cb1-26"><a href="#cb1-26" tabindex="-1"></a><span class="co">#&gt; ========================================================</span></span>
-<span id="cb1-27"><a href="#cb1-27" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb1-28"><a href="#cb1-28" tabindex="-1"></a><span class="co">#&gt; --- Tree 1 ---</span></span>
-<span id="cb1-29"><a href="#cb1-29" tabindex="-1"></a><span class="co">#&gt;   |-- IF x1 &lt;= 0.930</span></span>
-<span id="cb1-30"><a href="#cb1-30" tabindex="-1"></a><span class="co">#&gt;   |   `-- Leaf Value: +1.6150</span></span>
-<span id="cb1-31"><a href="#cb1-31" tabindex="-1"></a><span class="co">#&gt;   `-- IF x1 &gt;  0.930</span></span>
-<span id="cb1-32"><a href="#cb1-32" tabindex="-1"></a><span class="co">#&gt;      |-- IF x1 &lt;= 1.512</span></span>
-<span id="cb1-33"><a href="#cb1-33" tabindex="-1"></a><span class="co">#&gt;      |   `-- Leaf Value: -0.4124</span></span>
-<span id="cb1-34"><a href="#cb1-34" tabindex="-1"></a><span class="co">#&gt;      `-- IF x1 &gt;  1.512</span></span>
-<span id="cb1-35"><a href="#cb1-35" tabindex="-1"></a><span class="co">#&gt;         `-- Leaf Value: +1.0721</span></span>
-<span id="cb1-36"><a href="#cb1-36" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb1-37"><a href="#cb1-37" tabindex="-1"></a><span class="co">#&gt; --- Tree 2 ---</span></span>
-<span id="cb1-38"><a href="#cb1-38" tabindex="-1"></a><span class="co">#&gt;   |-- IF x1 &lt;= 0.695</span></span>
-<span id="cb1-39"><a href="#cb1-39" tabindex="-1"></a><span class="co">#&gt;   |   |-- IF x1 &lt;= -1.697</span></span>
-<span id="cb1-40"><a href="#cb1-40" tabindex="-1"></a><span class="co">#&gt;   |   |   `-- Leaf Value: -0.7460</span></span>
-<span id="cb1-41"><a href="#cb1-41" tabindex="-1"></a><span class="co">#&gt;   |   `-- IF x1 &gt;  -1.697</span></span>
-<span id="cb1-42"><a href="#cb1-42" tabindex="-1"></a><span class="co">#&gt;   |      `-- Leaf Value: +0.0757</span></span>
-<span id="cb1-43"><a href="#cb1-43" tabindex="-1"></a><span class="co">#&gt;   `-- IF x1 &gt;  0.695</span></span>
-<span id="cb1-44"><a href="#cb1-44" tabindex="-1"></a><span class="co">#&gt;      `-- Leaf Value: +0.8516</span></span></code></pre></div>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a><span class="co">#&gt; Mode              : regression</span></span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a><span class="co">#&gt; Total Trees       : 3</span></span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a><span class="co">#&gt; Total Splits      : 6 / 6 (max_splits)</span></span>
+<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a><span class="co">#&gt; Predictors        : x1, x2, x3</span></span>
+<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a><span class="co">#&gt; Used in Splits    : x1, x2, x3</span></span>
+<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a><span class="co">#&gt; ========================================================</span></span>
+<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb1-20"><a href="#cb1-20" tabindex="-1"></a><span class="co">#&gt; Use `summary(fit)` to display detailed decision rules.</span></span>
+<span id="cb1-21"><a href="#cb1-21" tabindex="-1"></a><span class="co">#&gt; Use `plot(fit)` to visualize decision tree structures.</span></span></code></pre></div>
+<p>The three effects were generated independently, so we expect FIGS to
+recover them as separate trees rather than as one deep tree.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">summary</span>(fit)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co">#&gt; ========================================================</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt;   FIGS Model Summary: Tree Sum Decision Rules</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt; ========================================================</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co">#&gt; --- Tree 1 ---</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt;   |-- IF x1 &lt;= 0.005</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt;   |   `-- Leaf Value: -0.0562</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt;   `-- IF x1 &gt;  0.005</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#&gt;       `-- Leaf Value: +2.8970</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="co">#&gt; --- Tree 2 ---</span></span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a><span class="co">#&gt;   |-- IF x2 &lt;= 0.485</span></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="co">#&gt;   |   `-- Leaf Value: -0.6032</span></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a><span class="co">#&gt;   `-- IF x2 &gt;  0.485</span></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="co">#&gt;       |-- IF x2 &lt;= 0.543</span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="co">#&gt;       |   `-- Leaf Value: +0.5268</span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co">#&gt;       `-- IF x2 &gt;  0.543</span></span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="co">#&gt;           |-- IF x2 &lt;= 0.607</span></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a><span class="co">#&gt;           |   `-- Leaf Value: +1.8001</span></span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a><span class="co">#&gt;           `-- IF x2 &gt;  0.607</span></span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a><span class="co">#&gt;               `-- Leaf Value: +1.3663</span></span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a><span class="co">#&gt; --- Tree 3 ---</span></span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a><span class="co">#&gt;   |-- IF x3 &lt;= -0.193</span></span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a><span class="co">#&gt;   |   |-- IF x1 &lt;= 0.045</span></span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a><span class="co">#&gt;   |   |   `-- Leaf Value: -0.9203</span></span>
+<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a><span class="co">#&gt;   |   `-- IF x1 &gt;  0.045</span></span>
+<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a><span class="co">#&gt;   |       `-- Leaf Value: -0.7062</span></span>
+<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a><span class="co">#&gt;   `-- IF x3 &gt;  -0.193</span></span>
+<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a><span class="co">#&gt;       `-- Leaf Value: +0.6819</span></span></code></pre></div>
+<p>Each leaf holds that tree’s <em>contribution</em> to the prediction;
+a prediction is the sum of one leaf per tree.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>preds <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit, <span class="at">new_data =</span> df)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">head</span>(preds)</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt; # A tibble: 6 × 1</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt;    .pred</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt;    &lt;dbl&gt;</span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt; 1 1.59  </span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt; 2 1.99  </span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; 3 2.98  </span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt; 4 4.95  </span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt; 5 1.59  </span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt; 6 0.0224</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="fu">cor</span>(preds<span class="sc">$</span>.pred, df<span class="sc">$</span>y)</span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt; [1] 0.9808112</span></span></code></pre></div>
+</div>
+<div id="variable-importance" class="section level2">
+<h2>Variable importance</h2>
+<p><code>figsr_importance()</code> adds up, for each predictor, the
+residual sum-of-squares reduction of every split it carries.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">figsr_importance</span>(fit)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co">#&gt; # A tibble: 3 × 3</span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co">#&gt;   feature  gain importance</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;   &lt;dbl&gt;      &lt;dbl&gt;</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt; 1 x1       655.       60.5</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; 2 x2       260.       24.0</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt; 3 x3       168.       15.5</span></span></code></pre></div>
+</div>
+<div id="visualizing-the-tree-sum" class="section level2">
+<h2>Visualizing the tree sum</h2>
+<p><code>plot()</code> draws every tree in the sum. Three styles are
+available: <code>&quot;scientific&quot;</code> (the default),
+<code>&quot;modern&quot;</code> and <code>&quot;classic&quot;</code>.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">plot</span>(fit)</span></code></pre></div>
+<p><img role="img" aria-label="The trees of the fitted FIGS model, drawn side by side." src="data:image/png;base64,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" alt="The trees of the fitted FIGS model, drawn side by side." /></p>
+</div>
+<div id="two-class-classification" class="section level2">
+<h2>Two-class classification</h2>
+<p>A factor outcome with two levels switches the model to
+classification. The engine still fits squared error, on the 0/1 encoding
+of the outcome, so the sum of the leaf values estimates the probability
+of the second level directly.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">7</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>dfc <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">x1 =</span> <span class="fu">rnorm</span>(<span class="dv">300</span>), <span class="at">x2 =</span> <span class="fu">rnorm</span>(<span class="dv">300</span>))</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>score <span class="ot">&lt;-</span> <span class="fl">1.5</span> <span class="sc">*</span> dfc<span class="sc">$</span>x1 <span class="sc">+</span> dfc<span class="sc">$</span>x2</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>dfc<span class="sc">$</span>y <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="fu">ifelse</span>(score <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="dv">300</span>, <span class="at">sd =</span> <span class="fl">0.5</span>) <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="st">&quot;yes&quot;</span>, <span class="st">&quot;no&quot;</span>))</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>fit_c <span class="ot">&lt;-</span> <span class="fu">figs</span>(y <span class="sc">~</span> x1 <span class="sc">+</span> x2, <span class="at">data =</span> dfc, <span class="at">max_splits =</span> <span class="dv">6</span>)</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">predict</span>(fit_c, <span class="at">new_data =</span> dfc))</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt; # A tibble: 6 × 1</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">#&gt;   .pred_class</span></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="co">#&gt;   &lt;fct&gt;      </span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="co">#&gt; 1 yes        </span></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co">#&gt; 2 no         </span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="co">#&gt; 3 no         </span></span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co">#&gt; 4 no         </span></span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a><span class="co">#&gt; 5 no         </span></span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a><span class="co">#&gt; 6 no</span></span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">predict</span>(fit_c, <span class="at">new_data =</span> dfc, <span class="at">type =</span> <span class="st">&quot;prob&quot;</span>))</span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a><span class="co">#&gt; # A tibble: 6 × 2</span></span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a><span class="co">#&gt;   .pred_no .pred_yes</span></span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a><span class="co">#&gt;      &lt;dbl&gt;     &lt;dbl&gt;</span></span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a><span class="co">#&gt; 1   0.0278    0.972 </span></span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a><span class="co">#&gt; 2   0.989     0.0115</span></span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a><span class="co">#&gt; 3   0.953     0.0465</span></span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a><span class="co">#&gt; 4   0.989     0.0115</span></span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a><span class="co">#&gt; 5   0.989     0.0115</span></span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a><span class="co">#&gt; 6   0.989     0.0115</span></span></code></pre></div>
+</div>
+<div id="use-inside-tidymodels" class="section level2">
+<h2>Use inside tidymodels</h2>
+<p><code>figs_tree()</code> registers FIGS with <code>parsnip</code>, so
+the model can be used anywhere a <code>parsnip</code> specification is
+accepted, and <code>max_splits</code>, <code>max_trees</code> and
+<code>min_n</code> can be tuned with <code>dials</code> and
+<code>tune</code>.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">library</span>(parsnip)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>spec <span class="ot">&lt;-</span> <span class="fu">figs_tree</span>(<span class="at">max_splits =</span> <span class="dv">6</span>, <span class="at">min_n =</span> <span class="dv">5</span>) <span class="sc">|&gt;</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="fu">set_engine</span>(<span class="st">&quot;figsr&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>  <span class="fu">set_mode</span>(<span class="st">&quot;regression&quot;</span>)</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>wf_fit <span class="ot">&lt;-</span> <span class="fu">fit</span>(spec, y <span class="sc">~</span> x1 <span class="sc">+</span> x2 <span class="sc">+</span> x3, <span class="at">data =</span> df)</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">predict</span>(wf_fit, <span class="at">new_data =</span> df))</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt; # A tibble: 6 × 1</span></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt;    .pred</span></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co">#&gt;    &lt;dbl&gt;</span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt; 1 1.59  </span></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt; 2 1.99  </span></span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt; 3 2.98  </span></span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="co">#&gt; 4 4.95  </span></span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a><span class="co">#&gt; 5 1.59  </span></span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a><span class="co">#&gt; 6 0.0224</span></span></code></pre></div>
+</div>
+<div id="bootstrap-ensembling" class="section level2">
+<h2>Bootstrap ensembling</h2>
+<p><code>bagging_figs()</code> fits several FIGS models on bootstrap
+resamples and averages them. It trades the readable rule set for
+stability on noisy data.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>bag <span class="ot">&lt;-</span> <span class="fu">bagging_figs</span>(y <span class="sc">~</span> x1 <span class="sc">+</span> x2 <span class="sc">+</span> x3, <span class="at">data =</span> df, <span class="at">n_estimators =</span> <span class="dv">5</span>, <span class="at">max_splits =</span> <span class="dv">6</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">predict</span>(bag, <span class="at">new_data =</span> df))</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt; # A tibble: 6 × 1</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt;     .pred</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt;     &lt;dbl&gt;</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; 1  1.65  </span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; 2  2.08  </span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; 3  2.93  </span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt; 4  5.02  </span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt; 5  1.50  </span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt; 6 -0.0483</span></span></code></pre></div>
+</div>
+<div id="limitations" class="section level2">
+<h2>Limitations</h2>
+<ul>
+<li>Classification is limited to two classes.</li>
+<li>Case weights are not supported.</li>
+<li>Factor predictors with more than 10 levels present in a node are
+skipped, because the split search enumerates subsets of levels.</li>
+<li>Missing values are dropped at fit time and raise an error at
+prediction time; there are no surrogate splits.</li>
+</ul>
 </div>
 
 
